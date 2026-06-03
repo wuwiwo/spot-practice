@@ -249,5 +249,13 @@ a{color:inherit;text-decoration:none}
 .toast.hidden{opacity:0;transform:translateX(-50%) translateY(10px)}
 .toast--error{border-color:var(--red);background:var(--red-d)}
 
+:.modal-overlay{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+.modal-inner{background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--rm);padding:16px;width:92%;max-width:400px;max-height:80vh;display:flex;flex-direction:column;gap:12px}
+.modal-title{font-size:.95rem;font-weight:600}
+.json-textarea{width:100%;min-height:200px;max-height:50vh;padding:10px;background:var(--bg);border:1px solid var(--border);border-radius:var(--rs);color:var(--text-pri);font-family:var(--font-mono,'SF Mono','Consolas',monospace);font-size:.75rem;line-height:1.5;resize:vertical;outline:none;tab-size:2}
+.json-textarea:focus{border-color:var(--accent)}
+.json-textarea[readonly]{cursor:default}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end}
+
 ::-webkit-scrollbar{width:3px;height:3px}
 ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}

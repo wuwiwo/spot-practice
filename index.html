@@ -25,7 +25,6 @@
     </div>
     <div class="home-actions">
       <button id="btn-import" class="btn btn-secondary btn-large">📥 导入场景</button>
-      <input type="file" id="import-json-input" accept=".json" class="hidden" />
       <button id="btn-new-scene" class="btn btn-primary btn-large">＋ 新建场景</button>
     </div>
   </main>
@@ -223,6 +222,18 @@
 
 <div id="toast" class="toast hidden"></div>
 <a id="download-link" class="hidden" download="scene.json"></a>
+
+<!-- ==================== JSON 弹窗 ==================== -->
+<div id="json-dialog" class="modal-overlay hidden">
+  <div class="modal-inner">
+    <h4 id="json-dialog-title" class="modal-title"></h4>
+    <textarea id="json-dialog-text" class="json-textarea" spellcheck="false" wrap="off"></textarea>
+    <div class="modal-actions">
+      <button id="json-dialog-action" class="btn btn-primary btn-sm"></button>
+      <button id="json-dialog-cancel" class="btn btn-sm btn-ghost">取消</button>
+    </div>
+  </div>
+</div>
 </div>
 <script type="module" src="js/storage.js"></script>
 <script type="module" src="js/editor.js"></script>
