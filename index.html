@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,user-scalable=no,viewport-fit=cover" />
+<meta name="theme-color" content="#0f0f14" />
+<title>场景寻物练习器</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+
+<!-- ==================== 首页 ==================== -->
+<section id="home-view" class="view">
+  <header class="app-header">
+    <h1 class="app-title">场景寻物练习器</h1>
+    <p class="app-subtitle">上传场景图，标记物品，限时练习</p>
+  </header>
+  <main class="home-main">
+    <div id="scene-list" class="scene-list"></div>
+    <div id="empty-state" class="empty-state hidden">
+      <div class="empty-icon">🖼️</div>
+      <p class="empty-text">还没有练习场景</p>
+      <p class="empty-hint">点击下方按钮创建，或导入他人分享的场景</p>
+    </div>
+    <div class="home-actions">
+      <button id="btn-import" class="btn btn-secondary btn-large">📥 导入场景</button>
+      <input type="file" id="import-json-input" accept=".json" class="hidden" />
+      <button id="btn-new-scene" class="btn btn-primary btn-large">＋ 新建场景</button>
+    </div>
+  </main>
+</section>
+
+<!-- ==================== 编辑器 ==================== -->
+<section id="editor-view" class="view hidden">
+  <header class="app-header app-header--compact">
+    <button id="btn-editor-back" class="btn btn-icon">←</button>
+    <div class="mode-toggle" id="mode-toggle">
+      <button class="mode-btn active" data-mode="place">📌 放置</button>
+      <button class="mode-btn" data-mode="polygon">⬠ 多边形</button>
+    </div>
+    <button id="btn-preview" class="btn btn-icon" title="预览点击范围">👁</button>
+    <button id="btn-editor-save" class="btn btn-primary btn-sm" disabled>保存</button>
+  </header>
+  <main class="editor-main">
+
+    <!-- 上传区 -->
+    <div id="upload-area" class="upload-area">
+      <div class="upload-icon">📷</div>
+      <p class="upload-text">点击上传场景图片</p>
+      <p class="upload-hint">支持 JPG、PNG、WebP</p>
+      <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp" class="hidden" />
+    </div>
+
+    <!-- 编辑工作区 -->
+    <div id="editor-workspace" class="editor-workspace hidden">
+      <!-- 屏幕尺寸信息条 -->
+      <div id="screen-info" class="screen-info"></div>
+
+      <!-- 缩放控制 -->
+      <div class="zoom-controls">
+        <button id="btn-ez-out" class="btn btn-icon-sm zoom-btn">−</button>
+        <span id="ez-level" class="zoom-label">100%</span>
+        <button id="btn-ez-in" class="btn btn-icon-sm zoom-btn">＋</button>
+        <button id="btn-ez-reset" class="btn btn-icon-sm zoom-btn zoom-btn--reset" title="重置">↺</button>
+        <span id="img-dims" class="img-dims"></span>
+      </div>
+
+      <!-- 图片区域 -->
+      <div id="editor-scroll" class="editor-scroll">
+        <div id="editor-image-inner" class="editor-image-inner">
+          <img id="editor-image" class="editor-image" alt="场景图" />
+          <svg id="markers-svg" class="markers-overlay"></svg>
+          <svg id="editor-feedback" class="markers-overlay editor-feedback"></svg>
+        </div>
+      </div>
+
+      <!-- 多边形编辑提示条 -->
+      <div id="polygon-hint" class="polygon-hint hidden">
+        <span id="polygon-hint-text">点击添加顶点（至少 3 个围成一个区域）</span>
+        <button id="polygon-undo" class="btn btn-sm btn-ghost hidden">↩ 撤销</button>
+        <button id="polygon-cancel" class="btn btn-sm">取消</button>
+        <button id="polygon-finish" class="btn btn-primary btn-sm hidden">完成 ✓</button>
+      </div>
+
+      <!-- 底部编辑面板 -->
+      <div id="edit-panel" class="edit-panel hidden">
+        <div class="edit-panel-body">
+          <div class="edit-panel-row">
+            <span class="edit-panel-label">名称</span>
+            <input type="text" id="ep-name" class="edit-panel-input" placeholder="物品名称" maxlength="20" />
+          </div>
+          <div class="edit-panel-row" id="ep-radius-row">
+            <span class="edit-panel-label">范围</span>
+            <input type="range" id="ep-radius" class="ep-radius-slider" min="2" max="20" step="0.5" value="6" />
+            <span id="ep-radius-val" class="ep-radius-tag">硬币大小</span>
+          </div>
+          <div class="edit-panel-row" id="ep-group-row">
+            <span class="edit-panel-label">分组</span>
+            <select id="ep-group" class="edit-panel-select"></select>
+            <button id="ep-group-new" class="btn btn-icon-sm" title="新建分组">＋</button>
+          </div>
+        </div>
+        <div class="edit-panel-actions">
+          <button id="ep-confirm" class="btn btn-primary btn-sm">✓ 确定</button>
+          <button id="ep-delete" class="btn btn-sm btn-outline-danger">删除</button>
+          <button id="ep-cancel" class="btn btn-sm btn-ghost">取消</button>
+        </div>
+      </div>
+
+      <!-- 底部抽屉（物品列表） -->
+      <div id="editor-drawer" class="editor-drawer">
+        <button id="drawer-toggle" class="drawer-toggle">
+          <span>物品列表</span>
+          <span id="drawer-count" class="badge">0</span>
+          <span class="drawer-arrow">▸</span>
+        </button>
+        <div id="drawer-content" class="drawer-content">
+          <!-- 分组管理快捷按钮 -->
+          <div class="drawer-toolbar">
+            <button id="drawer-grp-mgr" class="btn btn-sm btn-ghost">📁 管理分组</button>
+          </div>
+          <ul id="items-list" class="items-list"></ul>
+        </div>
+      </div>
+
+      <!-- 分组管理对话框（简单内联） -->
+      <div id="grp-dialog" class="grp-dialog hidden">
+        <div class="grp-dialog-inner">
+          <h4 class="grp-dialog-title">管理分组</h4>
+          <ul id="grp-list" class="grp-list"></ul>
+          <div class="grp-dialog-row">
+            <input type="text" id="grp-new-name" class="edit-panel-input" placeholder="新分组名称" maxlength="12" />
+            <button id="grp-new-btn" class="btn btn-primary btn-sm">创建</button>
+          </div>
+          <button id="grp-close" class="btn btn-sm btn-ghost" style="margin-top:8px;width:100%">关闭</button>
+        </div>
+      </div>
+    </div>
+  </main>
+</section>
+
+<!-- ==================== 练习模式 ==================== -->
+<section id="practice-view" class="view hidden">
+  <header class="app-header app-header--compact">
+    <button id="btn-practice-back" class="btn btn-icon">←</button>
+    <h2 class="app-title app-title--small">练习模式</h2>
+  </header>
+  <main class="practice-main">
+
+    <!-- 准备 -->
+    <div id="practice-ready" class="practice-ready">
+      <h3 id="practice-scene-name" class="practice-scene-name"></h3>
+      <div id="practice-group-filter" class="practice-group-filter"></div>
+      <div class="practice-config">
+        <label class="config-label">
+          <span>限时（秒）</span>
+          <input type="number" id="config-time" class="input-number" value="60" min="10" max="300" step="5" />
+        </label>
+        <label class="config-label">
+          <span>题目数量</span>
+          <input type="number" id="config-count" class="input-number" value="5" min="1" max="50" step="1" />
+        </label>
+      </div>
+      <button id="btn-start-practice" class="btn btn-primary btn-large">开始练习</button>
+    </div>
+
+    <!-- 进行中 -->
+    <div id="practice-active" class="practice-active hidden">
+      <div class="hud">
+        <div class="hud-item hud-timer" id="hud-timer">
+          <span class="hud-label">剩余</span>
+          <span class="hud-value" id="timer-display">60</span>
+        </div>
+        <div class="hud-item hud-score">
+          <span class="hud-label">得分</span>
+          <span class="hud-value" id="score-display">0</span>
+        </div>
+        <div class="hud-item hud-progress">
+          <span class="hud-label">进度</span>
+          <span class="hud-value"><span id="progress-current">0</span>/<span id="progress-total">0</span></span>
+        </div>
+      </div>
+
+      <div class="zoom-controls">
+        <button id="btn-zoom-out" class="btn btn-icon-sm zoom-btn">−</button>
+        <span id="zoom-level-display" class="zoom-label">100%</span>
+        <button id="btn-zoom-in" class="btn btn-icon-sm zoom-btn">＋</button>
+        <button id="btn-zoom-reset" class="btn btn-icon-sm zoom-btn zoom-btn--reset" title="重置">↺</button>
+      </div>
+
+      <div id="practice-scroll" class="practice-scroll">
+        <div id="practice-image-inner" class="practice-image-inner">
+          <img id="practice-image" class="editor-image" alt="练习场景" />
+          <svg id="feedback-svg" class="markers-overlay"></svg>
+        </div>
+        <div id="target-bar" class="target-bar target-bar--floating">
+          <span class="target-bar-grip" id="target-bar-grip">⠿</span>
+          <p class="target-label">找到它：</p>
+          <p class="target-name" id="target-name">---</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 结果 -->
+    <div id="practice-result" class="practice-result hidden">
+      <div class="result-icon" id="result-icon">🎯</div>
+      <h3 class="result-title">练习结束</h3>
+      <div class="result-stats">
+        <div class="stat-card"><span class="stat-label">正确</span><span class="stat-value stat-value--ok" id="result-hits">0</span></div>
+        <div class="stat-card"><span class="stat-label">未找到</span><span class="stat-value stat-value--miss" id="result-misses">0</span></div>
+        <div class="stat-card"><span class="stat-label">错误点击</span><span class="stat-value stat-value--warn" id="result-wrong">0</span></div>
+        <div class="stat-card"><span class="stat-label">用时</span><span class="stat-value" id="result-time">0s</span></div>
+        <div class="stat-card stat-card--wide"><span class="stat-label">正确率</span><span class="stat-value" id="result-accuracy">0%</span></div>
+      </div>
+      <div class="result-actions">
+        <button id="btn-retry" class="btn btn-primary">再来一次</button>
+        <button id="btn-result-back" class="btn btn-secondary">返回</button>
+      </div>
+    </div>
+  </main>
+</section>
+
+<div id="toast" class="toast hidden"></div>
+<a id="download-link" class="hidden" download="scene.json"></a>
+</div>
+<script type="module" src="js/storage.js"></script>
+<script type="module" src="js/editor.js"></script>
+<script type="module" src="js/practice.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
