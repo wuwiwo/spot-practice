@@ -254,13 +254,6 @@ scr.addEventListener('dblclick', e => {
   if (mode !== 'polygon' || drawPts.length < 3) return;
   e.preventDefault(); finishPolygon();
 });
-}
-
-// 多边形双击闭合
-scr.addEventListener('dblclick', e => {
-  if (mode !== 'polygon' || drawPts.length < 3) return;
-  e.preventDefault(); finishPolygon();
-});
 
 btnFinishPoly.addEventListener('click', () => {
   if (drawPts.length >= 3) finishPolygon();

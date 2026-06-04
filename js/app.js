@@ -1,166 +1,165 @@
 /**
- * app.js v4 — 主控制器
- * 剪贴板导入导出、分组信息
+ * app.js v4
  */
-
-import { getScenes, deleteScene, exportSceneData, parseImportData, createSceneFromImport, compressImage } from './storage.js';
+import { getScenes, deleteScene, exportSceneData, parseImportData, createSceneFromImport, compressImage, saveScene } from './storage.js';
 import { initEditor } from './editor.js';
 import { initPractice } from './practice.js';
 
-const $ = s => document.querySelector(s);
+var $ = function(s) { return document.querySelector(s); };
 
-const home = $('#home-view'), editor = $('#editor-view'), practice = $('#practice-view');
-const sList = $('#scene-list'), empty = $('#empty-state');
-const dialog = $('#json-dialog'), dTitle = $('#json-dialog-title'), dText = $('#json-dialog-text');
-const dAction = $('#json-dialog-action'), dCancel = $('#json-dialog-cancel');
-let view = 'home';
+var home = $('#home-view'), editor = $('#editor-view'), practice = $('#practice-view');
+var sList = $('#scene-list'), empty = $('#empty-state');
+var dialog = $('#json-dialog'), dTitle = $('#json-dialog-title');
+var dText = $('#json-dialog-text'), dAction = $('#json-dialog-action'), dCancel = $('#json-dialog-cancel');
 
-function navigate(name, p = {}) {
-  view = name;
+function navigate(name, p) {
+  p = p || {};
   home.classList.toggle('hidden', name !== 'home');
   editor.classList.toggle('hidden', name !== 'editor');
   practice.classList.toggle('hidden', name !== 'practice');
-  document.body.scrollTop = 0; document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+  document.documentElement.scrollTop = 0;
   if (name === 'home') render();
   else if (name === 'editor') initEditor(p.sceneId || null);
   else if (name === 'practice') initPractice(p.sceneId);
 }
 
 function render() {
-  const scenes = getScenes(); sList.innerHTML = '';
-  if (scenes.length === 0) { sList.classList.add('hidden'); empty.classList.remove('hidden'); return; }
-  sList.classList.remove('hidden'); empty.classList.add('hidden');
+  var scenes = getScenes();
+  sList.innerHTML = '';
+  if (scenes.length === 0) {
+    sList.classList.add('hidden');
+    empty.classList.remove('hidden');
+    return;
+  }
+  sList.classList.remove('hidden');
+  empty.classList.add('hidden');
+  scenes.sort(function(a,b) { return b.updatedAt - a.updatedAt; });
+  scenes.forEach(function(sc) {
+    var card = document.createElement('div');
+    card.className = 'scene-card';
 
-  [...scenes].sort((a, b) => b.updatedAt - a.updatedAt).forEach(sc => {
-    const card = document.createElement('div'); card.className = 'scene-card';
+    var thumb = document.createElement('img');
+    thumb.className = 'scene-card-thumb';
+    thumb.src = sc.imageDataUrl;
+    thumb.alt = sc.name;
+    thumb.loading = 'lazy';
 
-    const thumb = document.createElement('img'); thumb.className = 'scene-card-thumb';
-    thumb.src = sc.imageDataUrl; thumb.alt = sc.name; thumb.loading = 'lazy';
+    var info = document.createElement('div');
+    info.className = 'scene-card-info';
+    var nameEl = document.createElement('div');
+    nameEl.className = 'scene-card-name';
+    nameEl.textContent = sc.name || '(unnamed)';
+    var meta = document.createElement('div');
+    meta.className = 'scene-card-meta';
+    var mt = sc.items.length + ' \u4e2a\u7269\u54c1';
+    if (sc.groups && sc.groups.length > 0) mt += ' \u00b7 ' + sc.groups.length + ' \u5206\u7ec4';
+    meta.textContent = mt;
+    info.appendChild(nameEl);
+    info.appendChild(meta);
 
-    const info = document.createElement('div'); info.className = 'scene-card-info';
-    const name = document.createElement('div'); name.className = 'scene-card-name'; name.textContent = sc.name || '未命名';
-    const meta = document.createElement('div'); meta.className = 'scene-card-meta';
-    let metaText = `${sc.items.length} 个物品 · ${fmt(sc.updatedAt)}`;
-    if (sc.groups?.length > 0) metaText += ` · ${sc.groups.length} 分组`;
-    if (sc.screenWidth && sc.screenHeight) metaText += ` · ${sc.screenWidth}×${sc.screenHeight}`;
-    meta.textContent = metaText;
-    info.append(name, meta);
-
-    card.addEventListener('click', e => {
+    card.addEventListener('click', function(e) {
       if (e.target.closest('.scene-card-btn')) return;
       navigate('practice', { sceneId: sc.id });
     });
 
-    const acts = document.createElement('div'); acts.className = 'scene-card-actions';
-    const ed = document.createElement('button'); ed.className = 'scene-card-btn scene-card-btn--edit'; ed.textContent = '✎';
-    ed.title = '编辑'; ed.addEventListener('click', e => { e.stopPropagation(); navigate('editor', { sceneId: sc.id }); });
-    const ex = document.createElement('button'); ex.className = 'scene-card-btn scene-card-btn--export'; ex.textContent = '📤';
-    ex.title = '导出数据'; ex.addEventListener('click', e => { e.stopPropagation(); doExport(sc); });
-    const del = document.createElement('button'); del.className = 'scene-card-btn scene-card-btn--delete'; del.textContent = '🗑';
-    del.title = '删除'; del.addEventListener('click', e => {
+    var acts = document.createElement('div');
+    acts.className = 'scene-card-actions';
+
+    var ed = document.createElement('button');
+    ed.className = 'scene-card-btn scene-card-btn--edit';
+    ed.textContent = '\u270e';
+    ed.title = '\u7f16\u8f91';
+    ed.addEventListener('click', function(e) { e.stopPropagation(); navigate('editor', { sceneId: sc.id }); });
+
+    var ex = document.createElement('button');
+    ex.className = 'scene-card-btn scene-card-btn--export';
+    ex.textContent = '\ud83d\udce4';
+    ex.title = '\u5bfc\u51fa';
+    ex.addEventListener('click', function(e) { e.stopPropagation(); doExport(sc); });
+
+    var del = document.createElement('button');
+    del.className = 'scene-card-btn scene-card-btn--delete';
+    del.textContent = '\ud83d\uddd1';
+    del.title = '\u5220\u9664';
+    del.addEventListener('click', function(e) {
       e.stopPropagation();
-      if (confirm(`确定删除"${sc.name || '未命名'}"？`)) { deleteScene(sc.id); render(); toast('已删除'); }
+      if (confirm('\u786e\u5b9a\u5220\u9664' + (sc.name || '') + '\uff1f')) {
+        deleteScene(sc.id); render();
+      }
     });
-    acts.append(ed, ex, del);
-    card.append(thumb, info, acts);
+
+    acts.appendChild(ed);
+    acts.appendChild(ex);
+    acts.appendChild(del);
+    card.appendChild(thumb);
+    card.appendChild(info);
+    card.appendChild(acts);
     sList.appendChild(card);
   });
 }
 
-/* ========================================
-   导出 — 复制 JSON 文本
-   ======================================== */
-
 function doExport(sc) {
-  const data = exportSceneData(sc);
-  const json = JSON.stringify(data, null, 2);
-  dTitle.textContent = `导出「${sc.name || '未命名'}」`;
-  dText.value = json;
+  var data = exportSceneData(sc);
+  dTitle.textContent = '\u5bfc\u51fa\u300c' + (sc.name || '') + '\u300d';
+  dText.value = JSON.stringify(data, null, 2);
   dText.readOnly = true;
-  dAction.textContent = '📋 复制到剪贴板';
-  dAction.onclick = async () => {
-    try {
-      await navigator.clipboard.writeText(json);
-      toast('已复制到剪贴板');
+  dAction.textContent = '\u590d\u5236';
+  dAction.onclick = function() {
+    navigator.clipboard.writeText(dText.value).then(function() {
       closeDialog();
-    } catch {
-      // fallback: select all
+    })['catch'](function() {
       dText.select();
       document.execCommand('copy');
-      toast('已复制到剪贴板');
       closeDialog();
-    }
+    });
   };
-  dCancel.textContent = '关闭';
+  dCancel.textContent = '\u5173\u95ed';
   dCancel.onclick = closeDialog;
   dialog.classList.remove('hidden');
-  // 等弹窗渲染完自动选中
-  setTimeout(() => dText.select(), 100);
 }
 
-/* ========================================
-   导入 — 粘贴 JSON 文本
-   ======================================== */
-
 function openImport() {
-  dTitle.textContent = '导入场景 — 粘贴 JSON 数据';
+  dTitle.textContent = '\u7c98\u8d34 JSON \u6570\u636e';
   dText.value = '';
   dText.readOnly = false;
-  dAction.textContent = '📥 导入';
-  dAction.onclick = async () => {
-    const text = dText.value.trim();
-    if (!text) { toast('请先粘贴 JSON 数据', 1); return; }
-    const { data, errors } = parseImportData(text);
-    if (!data) { toast(errors[0] || '数据格式错误', 1); return; }
-    toast('数据解析成功，请选择对应场景图片');
-
-    const inp = document.createElement('input');
-    inp.type = 'file'; inp.accept = 'image/jpeg,image/png,image/webp';
-    inp.addEventListener('change', async () => {
-      const imgF = inp.files?.[0];
-      if (!imgF) { toast('已取消导入', 1); closeDialog(); return; }
-      try {
-        const imgInfo = await compressImage(imgF);
-        const sc = createSceneFromImport(data, imgInfo);
-        const { saveScene } = await import('./storage.js');
-        saveScene(sc); render();
+  dAction.textContent = '\u5bfc\u5165';
+  dAction.onclick = function() {
+    var text = dText.value.trim();
+    if (!text) return;
+    var result = parseImportData(text);
+    if (!result.data) return;
+    var inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = 'image/jpeg,image/png,image/webp';
+    inp.addEventListener('change', function() {
+      var file = inp.files ? inp.files[0] : null;
+      if (!file) return;
+      compressImage(file).then(function(imgInfo) {
+        var sc = createSceneFromImport(result.data, imgInfo);
+        saveScene(sc);
+        render();
         closeDialog();
-        toast(`已导入「${data.name}」(${data.items.length} 个物品${data.groups?.length ? `，${data.groups.length} 个分组` : ''})`);
-      } catch { toast('图片处理失败', 1); }
+      });
     });
     inp.click();
   };
-  dCancel.textContent = '取消';
+  dCancel.textContent = '\u53d6\u6d88';
   dCancel.onclick = closeDialog;
   dialog.classList.remove('hidden');
-  setTimeout(() => dText.focus(), 100);
 }
 
-function closeDialog() { dialog.classList.add('hidden'); }
+function closeDialog() {
+  dialog.classList.add('hidden');
+}
 
-/* --- import button --- */
 $('#btn-import').addEventListener('click', openImport);
+$('#btn-new-scene').addEventListener('click', function() { navigate('editor'); });
 
-/* --- events --- */
-window.addEventListener('navigate', e => {
-  const { view, sceneId } = e.detail || {};
-  if (view) navigate(view, { sceneId });
+window.addEventListener('navigate', function(e) {
+  var d = e.detail || {};
+  if (d.view) navigate(d.view, { sceneId: d.sceneId });
 });
-window.addEventListener('editor-saved', () => navigate('home'));
-$('#btn-new-scene').addEventListener('click', () => navigate('editor'));
-
-function fmt(ts) {
-  const d = new Date(ts), now = new Date(), diff = now - d;
-  if (diff < 60_000) return '刚刚';
-  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)} 小时前`;
-  return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-}
-
-function toast(msg, err) {
-  const t = $('#toast');
-  t.textContent = msg; t.className = 'toast' + (err ? ' toast--error' : ''); t.classList.remove('hidden');
-  clearTimeout(t._timeout); t._timeout = setTimeout(() => t.classList.add('hidden'), 2500);
-}
+window.addEventListener('editor-saved', function() { navigate('home'); });
 
 render();
