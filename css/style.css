@@ -97,8 +97,8 @@ a{color:inherit;text-decoration:none}
 /* --- editor layout --- */
 .editor-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .editor-workspace{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
-.editor-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--rm);position:relative}
-.editor-image-inner{position:relative;display:inline-block;min-width:100%}
+.editor-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--rm);position:relative;display:flex;justify-content:center}
+.editor-image-inner{position:relative;display:inline-block;min-width:100%;max-width:900px}
 .editor-image{width:100%;height:auto;display:block;pointer-events:none}
 .markers-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2}
 .editor-feedback{z-index:1;pointer-events:none}
@@ -210,8 +210,8 @@ a{color:inherit;text-decoration:none}
 @keyframes blink{50%{opacity:.3}}
 .hud-score .hud-value{color:var(--green)}
 
-.practice-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--rm);position:relative}
-.practice-image-inner{position:relative;display:inline-block;min-width:100%}
+.practice-scroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg-surface);border:1px solid var(--border);border-radius:var(--rm);position:relative;display:flex;justify-content:center}
+.practice-image-inner{position:relative;display:inline-block;min-width:100%;max-width:900px}
 .practice-image-inner .editor-image{width:100%;height:auto}
 .practice-image-inner .markers-overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2}
 
