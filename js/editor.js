@@ -21,7 +21,7 @@ let zoom = 1;
 let drawerOpen = false;
 
 // long-press state
-let lpT = null, lpXY = null, lpActive = false;
+
 
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
@@ -128,8 +128,10 @@ fileIn.addEventListener('change', async () => {
 });
 
 /* ========================================
-   图片交互：点击放置 + 长按拖拽
+   图片交互：点击放置 + 选中后拖拽调整
    ======================================== */
+
+let isDragging = false;
 
 function getImgPct(e) {
   const r = img.getBoundingClientRect();
@@ -161,33 +163,72 @@ function ptInPoly(px, py, poly) {
   return inside;
 }
 
-// click → place / select
+// pointerdown: 开始拖拽检测
+scr.addEventListener('pointerdown', e => {
+  if (preview || !scene || e.target.closest('#polygon-hint') || e.target.closest('#edit-panel')) return;
+  const pt = getImgPct(e);
+  const hit = findHit(pt.x, pt.y);
+  // 如果面板已打开，且点到了选中的标记 → 进入拖拽模式
+  if (editIdx >= 0 && hit === editIdx) {
+    isDragging = true;
+    e.preventDefault();
+    scr.setPointerCapture(e.pointerId);
+    return;
+  }
+});
+
+// pointermove: 拖拽移动标记
+scr.addEventListener('pointermove', e => {
+  if (!isDragging || editIdx < 0) return;
+  const pt = getImgPct(e);
+  const it = items[editIdx];
+  if (it.shape === 'circle') { it.x = pt.x; it.y = pt.y; }
+  else if (it.points?.length >= 3) {
+    // 整体移动多边形
+    const cx = it.points.reduce((s, p) => s + p.x, 0) / it.points.length;
+    const cy = it.points.reduce((s, p) => s + p.y, 0) / it.points.length;
+    const dx = pt.x - cx, dy = pt.y - cy;
+    it.points.forEach(p => { p.x += dx; p.y += dy; });
+  }
+  renderMarkers();
+});
+
+// pointerup: 结束拖拽
+scr.addEventListener('pointerup', e => {
+  if (isDragging) {
+    isDragging = false;
+    scr.releasePointerCapture(e.pointerId);
+    updatePanel();
+    renderAll();
+    return;
+  }
+});
+scr.addEventListener('pointercancel', e => {
+  if (isDragging) { isDragging = false; scr.releasePointerCapture(e.pointerId); }
+});
+
+// click: 放置 / 选中
 scr.addEventListener('click', e => {
+  if (isDragging) { isDragging = false; return; } // 拖拽结束，跳过 click
   if (e.target.closest('#polygon-hint') || e.target.closest('#target-bar') || e.target.closest('#edit-panel')) return;
   if (!scene) return; if (preview) { handlePreviewClick(e); return; }
-  if (lpActive) { lpActive = false; return; } // 长按拖拽结束，跳过 click
   const pt = getImgPct(e);
 
   if (mode === 'polygon') {
-    // 检查是否点击到已有顶点或第一个点（闭合）
     const vi = findVtx(pt.x, pt.y);
-    if (vi === 0 && drawPts.length >= 3) {
-      finishPolygon(); return;
-    }
+    if (vi === 0 && drawPts.length >= 3) { finishPolygon(); return; }
     if (vi > 0) { selVtx = vi; renderAll(); return; }
-    // 如果点击在已有的多边形内部或离已有顶点很近，忽略
     if (drawPts.some(p => dist(p, pt) < 2)) { renderAll(); return; }
     drawPts.push(pt);
     updatePolyHint();
     renderAll(); return;
   }
 
-  // place mode
+  // place mode: 选中已有或新建
   const hit = findHit(pt.x, pt.y);
   if (hit >= 0) {
     selectItem(hit); return;
   }
-  // 创建新物品
   items.push({ id: generateId(), name: '', shape: 'circle', x: pt.x, y: pt.y, radius: DR, points: [], groupId: null });
   selectItem(items.length - 1);
   renderAll();
@@ -202,40 +243,17 @@ function findVtx(x, y) {
 }
 function dist(a, b) { return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2); }
 
-// long-press → drag reposition
-scr.addEventListener('pointerdown', e => {
-  if (preview || !scene || e.target.closest('#polygon-hint') || e.target.closest('#edit-panel')) return;
-  const pt = getImgPct(e);
-  const hit = findHit(pt.x, pt.y);
-  if (hit < 0) return;
-  lpXY = { ...pt }; lpT = setTimeout(() => {
-    lpT = null; lpActive = true;
-    selectItem(hit);
-    // 开始拖拽记录
-  }, 400);
-});
-scr.addEventListener('pointermove', e => {
-  if (!lpActive || editIdx < 0) return;
-  const pt = getImgPct(e);
-  const it = items[editIdx];
-  if (it.shape === 'circle') { it.x = pt.x; it.y = pt.y; }
-  else if (it.points?.length >= 3) {
-    // 整体移动多边形
-    const dx = pt.x - lpXY.x, dy = pt.y - lpXY.y;
-    it.points.forEach(p => { p.x += dx; p.y += dy; });
-    lpXY = { ...pt };
-  }
-  renderMarkers();
-});
-scr.addEventListener('pointerup', () => {
-  clearTimeout(lpT); lpT = null;
-  if (lpActive) { lpActive = false; updatePanel(); renderAll(); }
-});
-
 function selectItem(idx) {
   editIdx = idx; selVtx = -1;
   openPanel(items[idx]);
   renderAll();
+}
+
+// 多边形双击闭合
+scr.addEventListener('dblclick', e => {
+  if (mode !== 'polygon' || drawPts.length < 3) return;
+  e.preventDefault(); finishPolygon();
+});
 }
 
 // 多边形双击闭合
